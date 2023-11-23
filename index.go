@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"github.com/Gurd0/helgelandsbruaBackend/api"
-
+	"github.com/Gurd0/helgelandsbruaBackend/api/data"
+	"github.com/Gurd0/helgelandsbruaBackend/api/knn"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -12,20 +12,10 @@ import (
 func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hi"))
-	})
-	r.Route("/api", func(r chi.Router) {
-		r.Route("/knn", func(r chi.Router) {
-			r.Get("/", api.PostPredict)
-		})
-
-		r.Route("/data", func(r chi.Router) {
-			r.Get("/update", api.GetUpdateData)
-		})
-
-	})
+	r.Mount("/knn", knn.Routes())
+	r.Mount("/data", data.Routes())
 
 	http.ListenAndServe(":3000", r)
 }
