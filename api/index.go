@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Gurd0/helgelandsbruaBackend/api/data"
-	"github.com/Gurd0/helgelandsbruaBackend/api/knn"
+	"github.com/Gurd0/helgelandsbruaBackend/data"
+	"github.com/Gurd0/helgelandsbruaBackend/knn"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
