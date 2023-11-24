@@ -191,6 +191,8 @@ github.com/rocketlaunchr/dbq/v2 v2.5.0/go.mod h1:MckY8J697t+AGc0ENl968yDVnD5cP/F
 github.com/rocketlaunchr/mysql-go v1.1.3/go.mod h1:SD/1bpRrmcdnBYRJq8eCerqqS1nTR9Y9WdW+LPzDLAQ=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
+github.com/rs/cors v1.10.1 h1:L0uuZVXIKlI1SShY2nhFfo44TYvDPQ1w4oFkUJNfhyo=
+github.com/rs/cors v1.10.1/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU=
 github.com/sandertv/go-formula/v2 v2.0.0-alpha.7/go.mod h1:Ag4V2fiOHWXct3SraXNN3dFzFtyu9vqBfrjfYWMGLhE=
 github.com/shabbyrobe/xmlwriter v0.0.0-20200208144257-9fca06d00ffa/go.mod h1:Yjr3bdWaVWyME1kha7X0jsz3k2DgXNa1Pj3XGyUAbx8=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=

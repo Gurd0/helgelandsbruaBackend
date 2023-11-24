@@ -16,7 +16,7 @@ type DataPoint struct {
 }
 
 var trainingData []DataPoint
-var k = 2
+var k = 5
 
 // Distance calculates the Euclidean distance between two data points.
 func Distance(a, b DataPoint) float64 {
@@ -69,6 +69,9 @@ func KNN(queryPoint DataPoint) string {
 }
 
 func init() {
+	UpdateDataInKNN()
+}
+func UpdateDataInKNN() {
 	// Open the CSV file
 	file, err := os.Open("data.csv")
 	if err != nil {
@@ -94,8 +97,12 @@ func init() {
 				log.Fatal(err)
 			}
 		}
-		label := record[len(record)-1]
 
+		label := record[len(record)-1]
+		//test to see if reducing size will help speed
+		features[0] = features[0] / 10
+		features[1] = features[1] / 100
+		features[2] = features[2] / 10
 		dataPoint := DataPoint{
 			Features: features,
 			Label:    label,
@@ -103,8 +110,26 @@ func init() {
 		trainingData = append(trainingData, dataPoint)
 	}
 }
-func Predict(wind float64, windDir float64, windGust float64) string {
-	queryPoint := DataPoint{Features: []float64{wind, windDir, windGust}, Label: ""}
+func Predict(obj PredictInput) float64 {
+	queryPoint := DataPoint{Features: []float64{obj.Wind, obj.WindDir}, Label: ""}
 	predictedLabel := KNN(queryPoint)
-	return predictedLabel
+	predictedLabelFloat, _ := strconv.ParseFloat(predictedLabel, 64)
+	res := predictedLabelFloat * obj.Wind
+	return res
+}
+func PredictList(inputList []PredictInput) []string {
+	var predictedLabels []string
+	for _, obj := range inputList {
+		queryPoint := DataPoint{Features: []float64{
+			math.Round((obj.Wind/10)*100) / 100,
+			obj.WindDir / 100,
+			math.Round((obj.WindGust/10)*100) / 100}, Label: ""}
+		predictedLabel := KNN(queryPoint)
+
+		predictedLabelFloat, _ := strconv.ParseFloat(predictedLabel, 64)
+		res := predictedLabelFloat * obj.Wind
+		res = math.Round(res*100) / 100
+		predictedLabels = append(predictedLabels, strconv.FormatFloat(res, 'f', -1, 64))
+	}
+	return predictedLabels
 }
