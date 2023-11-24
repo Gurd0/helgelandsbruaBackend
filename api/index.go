@@ -11,7 +11,7 @@ import (
 	"github.com/rs/cors"
 )
 
-func main() {
+func Handler() {
 	r := chi.NewRouter()
 	r.Use(cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
@@ -26,5 +26,4 @@ func main() {
 
 	fmt.Printf("running on port :3000")
 	http.ListenAndServe(":3000", r)
-
 }
