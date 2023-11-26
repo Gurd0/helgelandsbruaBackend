@@ -9,10 +9,10 @@ type PredictInputList struct {
 	Wind []PredictInput `json:"wind"`
 	Gust []PredictInput `json:"gust"`
 }
-type predictRespons struct {
+type PredictRespons struct {
 	Wind float64 `json:"wind"`
 }
-type predictResponsList struct {
+type PredictResponsList struct {
 	Wind []string `json:"wind"`
 	Gust []string `json:"gust"`
 }

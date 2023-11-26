@@ -29,7 +29,7 @@ func GetPredict(w http.ResponseWriter, r *http.Request) {
 		//TODO error handle
 	}
 	predictObj := PredictInput{forcastWind, forcastDir, forcastGust}
-	data := predictRespons{
+	data := PredictRespons{
 		Wind: Predict(predictObj),
 	}
 	jsonData, err := json.Marshal(data)
@@ -49,7 +49,7 @@ func PostPredict(w http.ResponseWriter, r *http.Request) {
 	}
 	predictionWind := PredictList(windList.Wind)
 	predictionGust := PredictList(windList.Gust)
-	data := predictResponsList{
+	data := PredictResponsList{
 		Wind: predictionWind,
 		Gust: predictionGust,
 	}
