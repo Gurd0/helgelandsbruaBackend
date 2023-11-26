@@ -22,8 +22,8 @@ func Routes() *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Mount("/knn", knn.Routes())
-	r.Mount("/data", data.Routes())
+	r.Mount("/api/knn", knn.Routes())
+	r.Mount("/api/data", data.Routes())
 
 	return r
 }
