@@ -31,6 +31,8 @@ func Distance(a, b DataPoint) float64 {
 
 // KNN implements the k-Nearest Neighbors algorithm.
 func KNN(queryPoint DataPoint) string {
+	//use min max on input
+	queryPoint.Features = minMaxScaling(queryPoint.Features, 0, 365)
 	// Calculate distances from the query point to all training points.
 	distances := make([]struct {
 		index    int
@@ -70,6 +72,7 @@ func KNN(queryPoint DataPoint) string {
 }
 
 func UpdateDataInKNN() {
+	fmt.Println("update run")
 	//TODO, må no fins ein måte å få læst filæ
 	resp, err := http.Get("https://helgelandsbrua-backend.vercel.app/data.csv")
 	if err != nil {
@@ -104,15 +107,24 @@ func UpdateDataInKNN() {
 
 		label := record[len(record)-1]
 		//test to see if reducing size will help speed
-		features[0] = features[0] / 10
-		features[1] = features[1] / 100
-		features[2] = features[2] / 10
+
+		features = minMaxScaling(features, 0, 365)
+
 		dataPoint := DataPoint{
 			Features: features,
 			Label:    label,
 		}
 		trainingData = append(trainingData, dataPoint)
 	}
+}
+func minMaxScaling(data []float64, min, max float64) []float64 {
+	scaledData := make([]float64, len(data))
+
+	for i, value := range data {
+		scaledData[i] = (value - min) / (max - min)
+	}
+	//fmt.Println(scaledData)
+	return scaledData
 }
 func Predict(obj PredictInput) float64 {
 	queryPoint := DataPoint{Features: []float64{obj.Wind, obj.WindDir}, Label: ""}

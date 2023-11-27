@@ -12,13 +12,19 @@ import (
 
 var content embed.FS
 
+func init() {
+
+}
+func init() {
+	knn.UpdateDataInKNN()
+}
 func Knn(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
+	//TODO fix
 	header.Add("Access-Control-Allow-Origin", "*")
 	header.Add("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 
-	knn.UpdateDataInKNN()
 	switch r.Method {
 	case "GET":
 		fmt.Println("Get")
