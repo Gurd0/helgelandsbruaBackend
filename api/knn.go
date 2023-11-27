@@ -13,9 +13,6 @@ import (
 var content embed.FS
 
 func init() {
-
-}
-func init() {
 	knn.UpdateDataInKNN()
 }
 func Knn(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +65,7 @@ func postPredict(w http.ResponseWriter, r *http.Request) {
 		//TODO error
 	}
 	predictionWind := knn.PredictList(windList.Wind)
-	predictionGust := knn.PredictList(windList.Gust)
+	predictionGust := predictionWind
 	data := knn.PredictResponsList{
 		Wind: predictionWind,
 		Gust: predictionGust,

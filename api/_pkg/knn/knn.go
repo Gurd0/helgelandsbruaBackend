@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 // DataPoint represents a data point in the dataset.
@@ -17,7 +18,7 @@ type DataPoint struct {
 }
 
 var trainingData []DataPoint
-var k = 5
+var k = 14
 
 // Distance calculates the Euclidean distance between two data points.
 func Distance(a, b DataPoint) float64 {
@@ -33,18 +34,9 @@ func Distance(a, b DataPoint) float64 {
 func KNN(queryPoint DataPoint) string {
 	//use min max on input
 	queryPoint.Features = minMaxScaling(queryPoint.Features, 0, 365)
-	// Calculate distances from the query point to all training points.
-	distances := make([]struct {
-		index    int
-		distance float64
-	}, len(trainingData))
 
-	for i, dataPoint := range trainingData {
-		distances[i] = struct {
-			index    int
-			distance float64
-		}{i, Distance(queryPoint, dataPoint)}
-	}
+	// Parallelizeed distance calculation
+	distances := parallelDistanceCalculation(queryPoint, trainingData, 4)
 
 	// Sort distances in ascending order.
 	sort.Slice(distances, func(i, j int) bool {
@@ -70,7 +62,74 @@ func KNN(queryPoint DataPoint) string {
 
 	return predictedLabel
 }
+func parallelDistanceCalculation(queryPoint DataPoint, trainingData []DataPoint, numWorkers int) []struct {
+	index    int
+	distance float64
+} {
+	var wg sync.WaitGroup
+	distancesMutex := sync.Mutex{}
+	distances := make([]struct {
+		index    int
+		distance float64
+	}, len(trainingData))
 
+	// Channel for sending work to workers
+	workCh := make(chan int, len(trainingData))
+
+	// Channel for receiving results from workers
+	resultCh := make(chan struct {
+		index    int
+		distance float64
+	}, len(trainingData))
+
+	// Function to launch a worker
+	worker := func() {
+		defer wg.Done()
+		for i := range workCh {
+			dataPoint := trainingData[i]
+			distance := Distance(queryPoint, dataPoint)
+
+			resultCh <- struct {
+				index    int
+				distance float64
+			}{i, distance}
+		}
+	}
+
+	// Start worker goroutines
+	for w := 1; w <= numWorkers; w++ {
+		wg.Add(1)
+		go worker()
+	}
+
+	// Send work to workers
+	go func() {
+		defer close(workCh)
+		for i := 0; i < len(trainingData); i++ {
+			workCh <- i
+		}
+	}()
+
+	// Close resultCh when all workers are done
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Collect results from workers
+	go func() {
+		for result := range resultCh {
+			distancesMutex.Lock()
+			distances[result.index] = result
+			distancesMutex.Unlock()
+		}
+	}()
+
+	// Wait for all workers to finish
+	wg.Wait()
+
+	return distances
+}
 func UpdateDataInKNN() {
 	fmt.Println("update run")
 	//TODO, må no fins ein måte å få læst filæ
@@ -81,7 +140,7 @@ func UpdateDataInKNN() {
 	}
 	defer resp.Body.Close()
 
-	// Check if the request was successful (status code 200)
+	// Check if the request was successful
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Error: Unexpected status code", resp.Status)
 		return
@@ -117,6 +176,8 @@ func UpdateDataInKNN() {
 		trainingData = append(trainingData, dataPoint)
 	}
 }
+
+// min max scaling for points to reduce size diff.
 func minMaxScaling(data []float64, min, max float64) []float64 {
 	scaledData := make([]float64, len(data))
 
