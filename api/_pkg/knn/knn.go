@@ -70,7 +70,7 @@ func KNN(queryPoint DataPoint) string {
 }
 
 func UpdateDataInKNN() {
-	resp, err := http.Get("http://localhost:3000/data.csv")
+	resp, err := http.Get("https://helgelandsbrua-backend.vercel.app/data.csv")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
