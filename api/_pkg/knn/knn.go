@@ -70,6 +70,7 @@ func KNN(queryPoint DataPoint) string {
 }
 
 func UpdateDataInKNN() {
+	//TODO, må no fins ein måte å få læst filæ
 	resp, err := http.Get("https://helgelandsbrua-backend.vercel.app/data.csv")
 	if err != nil {
 		fmt.Println("Error:", err)
