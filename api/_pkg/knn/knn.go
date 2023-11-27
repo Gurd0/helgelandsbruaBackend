@@ -2,9 +2,10 @@ package knn
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"math"
-	"os"
+	"net/http"
 	"sort"
 	"strconv"
 )
@@ -68,19 +69,21 @@ func KNN(queryPoint DataPoint) string {
 	return predictedLabel
 }
 
-func init() {
-	UpdateDataInKNN()
-}
 func UpdateDataInKNN() {
-	// Open the CSV file
-	file, err := os.Open("data.csv")
+	resp, err := http.Get("http://localhost:3000/data.csv")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error:", err)
+		return
 	}
-	defer file.Close()
+	defer resp.Body.Close()
 
-	// Parse the CSV file
-	reader := csv.NewReader(file)
+	// Check if the request was successful (status code 200)
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Error: Unexpected status code", resp.Status)
+		return
+	}
+
+	reader := csv.NewReader(resp.Body)
 	records, err := reader.ReadAll()
 	if err != nil {
 		log.Fatal(err)
