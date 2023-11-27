@@ -15,6 +15,7 @@ var content embed.FS
 func Knn(w http.ResponseWriter, r *http.Request) {
 	r.Header.Add("Access-Control-Allow-Origin", "*")
 	r.Header.Add("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT")
+	r.Header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	knn.UpdateDataInKNN()
 	switch r.Method {
 	case "GET":
