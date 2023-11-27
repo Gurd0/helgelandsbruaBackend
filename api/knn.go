@@ -13,7 +13,7 @@ import (
 var content embed.FS
 
 func Knn(w http.ResponseWriter, r *http.Request) {
-
+	r.Header.Add("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT")
 	knn.UpdateDataInKNN()
 	switch r.Method {
 	case "GET":
