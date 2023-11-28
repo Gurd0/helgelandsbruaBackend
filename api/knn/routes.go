@@ -1,36 +1,21 @@
-package handler
+package knn
 
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/Gurd0/helgelandsbruaBackend/api/_pkg/knn"
+	"github.com/go-chi/chi"
 )
 
 var content embed.FS
 
-func init() {
-	knn.UpdateDataInKNN()
-}
-func Knn(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	//TODO fix
-	header.Add("Access-Control-Allow-Origin", "*")
-	header.Add("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT")
-	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-
-	switch r.Method {
-	case "GET":
-		fmt.Println("Get")
-		getPredict(w, r)
-	case "POST":
-		postPredict(w, r)
-	default:
-		fmt.Println("It's something else.")
-	}
+func Routes() chi.Router {
+	r := chi.NewRouter()
+	r.Get("/", getPredict)
+	r.Post("/", postPredict)
+	return r
 }
 func getPredict(w http.ResponseWriter, r *http.Request) {
 	forcastWind, err := strconv.ParseFloat(r.URL.Query().Get("forcastWind"), 64)
@@ -45,9 +30,9 @@ func getPredict(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//TODO error handle
 	}
-	predictObj := knn.PredictInput{Wind: forcastWind, WindDir: forcastDir, WindGust: forcastGust}
-	data := knn.PredictRespons{
-		Wind: knn.Predict(predictObj),
+	predictObj := PredictInput{Wind: forcastWind, WindDir: forcastDir, WindGust: forcastGust}
+	data := PredictRespons{
+		Wind: Predict(predictObj),
 	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -59,14 +44,14 @@ func getPredict(w http.ResponseWriter, r *http.Request) {
 }
 func postPredict(w http.ResponseWriter, r *http.Request) {
 
-	var windList knn.PredictInputList
+	var windList PredictInputList
 	err := json.NewDecoder(r.Body).Decode(&windList)
 	if err != nil {
 		//TODO error
 	}
-	predictionWind := knn.PredictList(windList.Wind)
+	predictionWind := PredictList(windList.Wind)
 	predictionGust := predictionWind
-	data := knn.PredictResponsList{
+	data := PredictResponsList{
 		Wind: predictionWind,
 		Gust: predictionGust,
 	}

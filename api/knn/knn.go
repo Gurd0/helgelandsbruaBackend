@@ -18,7 +18,11 @@ type DataPoint struct {
 }
 
 var trainingData []DataPoint
-var k = 14
+var k = 10
+
+func init() {
+	UpdateDataInKNN()
+}
 
 // Distance calculates the Euclidean distance between two data points.
 func Distance(a, b DataPoint) float64 {
@@ -34,7 +38,9 @@ func Distance(a, b DataPoint) float64 {
 func KNN(queryPoint DataPoint) string {
 	//use min max on input
 	queryPoint.Features = minMaxScaling(queryPoint.Features, 0, 365)
-
+	//combine the points to reduce dimensions
+	queryPoint.Features = []float64{queryPoint.Features[0] + queryPoint.Features[1]}
+	fmt.Println(queryPoint.Features)
 	// Parallelizeed distance calculation
 	distances := parallelDistanceCalculation(queryPoint, trainingData, 4)
 
@@ -168,6 +174,7 @@ func UpdateDataInKNN() {
 		//test to see if reducing size will help speed
 
 		features = minMaxScaling(features, 0, 365)
+		features = []float64{features[0] + features[1]}
 
 		dataPoint := DataPoint{
 			Features: features,
