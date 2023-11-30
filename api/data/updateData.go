@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -54,10 +53,12 @@ func convertJSONToCSV(source []WindData, destination string) error {
 
 	for _, r := range source {
 		var csvRow []string
-		windFloat, _ := strconv.ParseFloat(r.Wind, 64)
+		/*windFloat, _ := strconv.ParseFloat(r.Wind, 64)
 		forcastWindFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
-		windDiff := windFloat / forcastWindFloat
-		csvRow = append(csvRow, r.Forcastwind, r.Forcastwinddir, r.Forcastgust, strconv.FormatFloat(windDiff, 'f', -1, 64))
+		windDiff := windFloat / forcastWindFloat */
+		//Round wind diff to 2 decimal
+
+		csvRow = append(csvRow, r.Forcastwind, r.Forcastwinddir, r.Wind)
 		if err := writer.Write(csvRow); err != nil {
 			return err
 		}

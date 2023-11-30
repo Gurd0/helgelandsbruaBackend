@@ -43,7 +43,6 @@ func getPredict(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 func postPredict(w http.ResponseWriter, r *http.Request) {
-
 	var windList PredictInputList
 	err := json.NewDecoder(r.Body).Decode(&windList)
 	if err != nil {
