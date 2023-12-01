@@ -5,92 +5,25 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"sort"
 	"strconv"
 	"sync"
+
+	"github.com/Gurd0/helgelandsbruaBackend/api/scaler"
 )
 
 // DataPoint represents a data point in the dataset.
-type DataPoint struct {
-	Features []float64
-	Label    string
-}
+type DataPoint = scaler.DataPoint
 
 var data []DataPoint
 var trainingData []DataPoint
 var testData []DataPoint
-var scaler = StandardScaler{}
+var GlobalScaler scaler.DataPointTransformer = &scaler.StandardScaler{}
 var k = 40
 
 func init() {
 	UpdateDataInKNN()
-}
-
-type StandardScaler struct {
-	Mean    []float64
-	StdDev  []float64
-	Trained bool
-}
-
-// Fit computes the mean and standard deviation of each feature from the provided dataset.
-func (scaler *StandardScaler) Fit(data []DataPoint) {
-	numFeatures := len(data[0].Features)
-	numSamples := len(data)
-
-	// Initialize Mean and StdDev slices
-	scaler.Mean = make([]float64, numFeatures)
-	scaler.StdDev = make([]float64, numFeatures)
-
-	// Calculate mean
-	for _, point := range data {
-		for j, value := range point.Features {
-			scaler.Mean[j] += value
-		}
-	}
-
-	for j := range scaler.Mean {
-		scaler.Mean[j] /= float64(numSamples)
-	}
-
-	// Calculate standard deviation
-	for _, point := range data {
-		for j, value := range point.Features {
-			scaler.StdDev[j] += math.Pow(value-scaler.Mean[j], 2)
-		}
-	}
-
-	for j := range scaler.StdDev {
-		scaler.StdDev[j] = math.Sqrt(scaler.StdDev[j] / float64(numSamples))
-	}
-
-	scaler.Trained = true
-}
-
-// Transform scales the input data based on the mean and standard deviation computed during fitting.
-func (scaler *StandardScaler) Transform(data []DataPoint) []DataPoint {
-	if !scaler.Trained {
-		fmt.Println("Scaler has not been trained. Call Fit() first.")
-		return nil
-	}
-	numSamples := len(data)
-	numFeatures := len(data[0].Features)
-
-	transformed := make([]DataPoint, numSamples)
-
-	for i, point := range data {
-		transformed[i] = DataPoint{
-			Features: make([]float64, numFeatures),
-			Label:    point.Label,
-		}
-		for j, value := range point.Features {
-			transformed[i].Features[j] = (value - scaler.Mean[j]) / scaler.StdDev[j]
-		}
-
-		//transformed[i].Features[0] = transformed[i].Features[0] / 2
-	}
-	return transformed
 }
 
 // Distance calculates the Euclidean distance between two data points.
@@ -104,13 +37,12 @@ func Distance(a, b DataPoint) float64 {
 }
 
 // KNN implements the k-Nearest Neighbors algorithm.
-func KNN(queryPoints []DataPoint, scaleData bool) []string {
+func KNN(queryPoints []scaler.DataPoint, scaleData bool) []string {
+
 	predictions := make([]string, len(queryPoints))
 	if scaleData {
-		//use min max on input
-		//queryPoints = minMaxScaling(queryPoints, 0, 365)
-		queryPoints = scaler.Transform(queryPoints)
-
+		queryPoints = GlobalScaler.Transform(queryPoints)
+		fmt.Println(queryPoints)
 	}
 	// Parallelizeed distance calculation
 	distances := parallelDistanceCalculation(queryPoints, trainingData, 4)
@@ -291,33 +223,15 @@ func UpdateDataInKNN() {
 		}
 		d = append(d, dataPoint)
 	}
-	scaler.Fit(d)
-	SplitData(scaler.Transform(d), 0.05)
-}
-
-// SplitData randomly splits the data into training and test sets.
-func SplitData(data []DataPoint, testPercentage float64) {
-	rand.Seed(42)
-
-	// Shuffle the data.
-	shuffledData := make([]DataPoint, len(data))
-	copy(shuffledData, data)
-	rand.Shuffle(len(shuffledData), func(i, j int) {
-		shuffledData[i], shuffledData[j] = shuffledData[j], shuffledData[i]
-	})
-
-	// Determine the split index based on the test percentage.
-	splitIndex := int(float64(len(shuffledData)) * testPercentage)
-
-	// Split the data.
-	trainingData = shuffledData[splitIndex:]
-	testData = shuffledData[:splitIndex]
-	fmt.Println(testData)
+	//queryPointsForGlobalScaler := scaler.ToDataPointSlice(d)
+	GlobalScaler.Fit(d)
+	trainingData = GlobalScaler.Transform(d)
 }
 
 func Predict(obj PredictInput) float64 {
 	var queryPointList []DataPoint
-	queryPoint := DataPoint{Features: []float64{obj.Wind, obj.WindDir}, Label: ""}
+	scaledX, scaledY := CircularScale(obj.WindDir)
+	queryPoint := DataPoint{Features: []float64{obj.Wind, scaledX, scaledY}, Label: ""}
 	queryPointList = append(queryPointList, queryPoint)
 	predictedLabel := KNN(queryPointList, true)
 	predictedLabelFloat, _ := strconv.ParseFloat(predictedLabel[0], 64)
@@ -327,9 +241,13 @@ func Predict(obj PredictInput) float64 {
 func PredictList(inputList []PredictInput) []string {
 	var datapointList []DataPoint
 	for _, obj := range inputList {
+		scaledX, scaledY := CircularScale(obj.WindDir)
 		queryPoint := DataPoint{Features: []float64{
 			obj.Wind,
-			obj.WindDir}, Label: ""}
+			scaledX,
+			scaledY}, Label: ""}
+		fmt.Println(queryPoint)
+		//queryPoint.Features[1] = math.Log(queryPoint.Features[1])
 		datapointList = append(datapointList, queryPoint)
 	}
 	res := KNN(datapointList, true)
@@ -341,4 +259,10 @@ func PredictList(inputList []PredictInput) []string {
 	}
 
 	return res
+}
+func CircularScale(angle float64) (scaledX, scaledY float64) {
+	radian := angle * (math.Pi / 180.0)
+	scaledX = math.Cos(radian)
+	scaledY = math.Sin(radian)
+	return scaledX, scaledY
 }

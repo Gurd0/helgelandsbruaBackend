@@ -6,6 +6,7 @@ import (
 
 	"github.com/Gurd0/helgelandsbruaBackend/api/data"
 	"github.com/Gurd0/helgelandsbruaBackend/api/knn"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/rs/cors"

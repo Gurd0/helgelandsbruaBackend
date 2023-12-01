@@ -4,8 +4,10 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -53,15 +55,23 @@ func convertJSONToCSV(source []WindData, destination string) error {
 
 	for _, r := range source {
 		var csvRow []string
-		/*windFloat, _ := strconv.ParseFloat(r.Wind, 64)
-		forcastWindFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
-		windDiff := windFloat / forcastWindFloat */
-		//Round wind diff to 2 decimal
+		/*windFloat, _ := strconv.ParseFloat(r.Wind, 64)*/
 
-		csvRow = append(csvRow, r.Forcastwind, r.Forcastwinddir, r.Wind)
+		forcastWindDirFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
+		scaledX, scaledY := CircularScale(forcastWindDirFloat)
+
+		csvRow = append(csvRow, r.Forcastwind, strconv.FormatFloat(scaledX, 'f', -1, 64), strconv.FormatFloat(scaledY, 'f', -1, 64), r.Wind)
 		if err := writer.Write(csvRow); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// CircularScale scales a given angle in degrees using sine and cosine transformations.
+func CircularScale(angle float64) (scaledX, scaledY float64) {
+	radian := angle * (math.Pi / 180.0)
+	scaledX = math.Cos(radian)
+	scaledY = math.Sin(radian)
+	return scaledX, scaledY
 }
