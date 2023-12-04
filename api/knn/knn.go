@@ -53,6 +53,7 @@ func KNN(queryPoints []scaler.DataPoint, scaleData bool) []string {
 		sort.Slice(queryPointDistances, func(j, k int) bool {
 			return queryPointDistances[j].distance < queryPointDistances[k].distance
 		})
+		//add weighted distances
 		labelCounts := make(map[string]float64)
 		for j := 0; j < k; j++ {
 
