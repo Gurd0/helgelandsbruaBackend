@@ -4,11 +4,12 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/Gurd0/helgelandsbruaBackend/api/knn"
 )
 
 type WindData struct {
@@ -55,23 +56,17 @@ func convertJSONToCSV(source []WindData, destination string) error {
 
 	for _, r := range source {
 		var csvRow []string
-		/*windFloat, _ := strconv.ParseFloat(r.Wind, 64)*/
+		windFloat, _ := strconv.ParseFloat(r.Wind, 64)
+		windForcastFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
+		resWind := windFloat / windForcastFloat
 
 		forcastWindDirFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
-		scaledX, scaledY := CircularScale(forcastWindDirFloat)
+		scaledX, scaledY := knn.CircularScale(forcastWindDirFloat)
 
-		csvRow = append(csvRow, r.Forcastwind, strconv.FormatFloat(scaledX, 'f', -1, 64), strconv.FormatFloat(scaledY, 'f', -1, 64), r.Wind)
+		csvRow = append(csvRow, r.Forcastwind, strconv.FormatFloat(scaledX, 'f', -1, 64), strconv.FormatFloat(scaledY, 'f', -1, 64), strconv.FormatFloat(resWind, 'f', -1, 64))
 		if err := writer.Write(csvRow); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// CircularScale scales a given angle in degrees using sine and cosine transformations.
-func CircularScale(angle float64) (scaledX, scaledY float64) {
-	radian := angle * (math.Pi / 180.0)
-	scaledX = math.Cos(radian)
-	scaledY = math.Sin(radian)
-	return scaledX, scaledY
 }

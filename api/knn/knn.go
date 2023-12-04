@@ -20,7 +20,7 @@ var data []DataPoint
 var trainingData []DataPoint
 var testData []DataPoint
 var GlobalScaler scaler.DataPointTransformer = &scaler.StandardScaler{}
-var k = 40
+var k = 900
 
 func init() {
 	UpdateDataInKNN()
@@ -42,30 +42,33 @@ func KNN(queryPoints []scaler.DataPoint, scaleData bool) []string {
 	predictions := make([]string, len(queryPoints))
 	if scaleData {
 		queryPoints = GlobalScaler.Transform(queryPoints)
-		fmt.Println(queryPoints)
+		//fmt.Println(queryPoints)
 	}
 	// Parallelizeed distance calculation
 	distances := parallelDistanceCalculation(queryPoints, trainingData, 4)
 	// Process each query point
+
 	for i, queryPointDistances := range distances {
 		// Sort distances for the current query point in ascending order.
 		sort.Slice(queryPointDistances, func(j, k int) bool {
-			return queryPointDistances[i].distance < queryPointDistances[j].distance
+			return queryPointDistances[j].distance < queryPointDistances[k].distance
 		})
-
-		// Count the occurrences of each label among the k nearest neighbors.
-		labelCounts := make(map[string]int)
+		labelCounts := make(map[string]float64)
 		for j := 0; j < k; j++ {
+
+			distance := queryPointDistances[j].distance
+			weight := math.Exp(-math.Pow(distance, 2) / (2 * math.Pow(999, 2))) // Adjust sigma based on your preference
 			label := trainingData[queryPointDistances[j].trainingIndex].Label
-			labelCounts[label]++
+			labelCounts[label] += weight
 		}
 
-		// Find the label with the maximum count.
-		maxCount := 0
+		// Find the label with the maximum weighted count.
+		var maxWeight float64
 		var predictedLabel string
-		for label, count := range labelCounts {
-			if count > maxCount {
-				maxCount = count
+
+		for label, weight := range labelCounts {
+			if weight > maxWeight {
+				maxWeight = weight
 				predictedLabel = label
 			}
 		}
@@ -235,7 +238,7 @@ func Predict(obj PredictInput) float64 {
 	queryPointList = append(queryPointList, queryPoint)
 	predictedLabel := KNN(queryPointList, true)
 	predictedLabelFloat, _ := strconv.ParseFloat(predictedLabel[0], 64)
-	res := predictedLabelFloat
+	res := predictedLabelFloat * obj.Wind
 	return res
 }
 func PredictList(inputList []PredictInput) []string {
@@ -246,14 +249,14 @@ func PredictList(inputList []PredictInput) []string {
 			obj.Wind,
 			scaledX,
 			scaledY}, Label: ""}
-		fmt.Println(queryPoint)
 		//queryPoint.Features[1] = math.Log(queryPoint.Features[1])
 		datapointList = append(datapointList, queryPoint)
 	}
 	res := KNN(datapointList, true)
 	for index, obj := range res {
 		objFloat, _ := strconv.ParseFloat(obj, 64)
-		r := objFloat
+		r := objFloat * inputList[index].Wind
+		fmt.Println(objFloat)
 		resString := strconv.FormatFloat(r, 'f', 2, 64)
 		res[index] = resString
 	}
@@ -264,5 +267,6 @@ func CircularScale(angle float64) (scaledX, scaledY float64) {
 	radian := angle * (math.Pi / 180.0)
 	scaledX = math.Cos(radian)
 	scaledY = math.Sin(radian)
+	fmt.Println("X : ", scaledX, "-- Y:", scaledY)
 	return scaledX, scaledY
 }
