@@ -8,8 +8,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/Gurd0/helgelandsbruaBackend/api/knn"
 )
 
 type WindData struct {
@@ -60,10 +58,11 @@ func convertJSONToCSV(source []WindData, destination string) error {
 		windForcastFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
 		resWind := windFloat / windForcastFloat
 
-		forcastWindDirFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
-		scaledX, scaledY := knn.CircularScale(forcastWindDirFloat)
+		//forcastWindDirFloat, _ := strconv.ParseFloat(r.Forcastwind, 64)
+		//scaledX, scaledY := knn.CircularScale(forcastWindDirFloat)
 
-		csvRow = append(csvRow, r.Forcastwind, strconv.FormatFloat(scaledX, 'f', -1, 64), strconv.FormatFloat(scaledY, 'f', -1, 64), strconv.FormatFloat(resWind, 'f', -1, 64))
+		//csvRow = append(csvRow, r.Forcastwind, strconv.FormatFloat(scaledX, 'f', -1, 64), strconv.FormatFloat(scaledY, 'f', -1, 64), strconv.FormatFloat(resWind, 'f', -1, 64))
+		csvRow = append(csvRow, r.Forcastwind, r.Forcastwinddir, strconv.FormatFloat(resWind, 'f', -1, 64))
 		if err := writer.Write(csvRow); err != nil {
 			return err
 		}
