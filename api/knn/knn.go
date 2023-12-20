@@ -52,6 +52,18 @@ func distanceSwitch(queryPoint, trainingPoint DataPoint, options ExampleOptions)
 		return EuclideanDistance(queryPoint, trainingPoint)
 	}
 }
+func weightingSwitch(distance float64, sigma float64, options ExampleOptions) float64 {
+	switch os := options.distanceMethod; os {
+	case "Triangular":
+		return TriangularKernel(distance, sigma)
+	case "Epanechnikov":
+		return EpanechnikovKernel(distance, sigma)
+	case "Gaussian":
+		return GaussianKernel(distance, sigma)
+	default:
+		return GaussianKernel(distance, sigma)
+	}
+}
 
 // KNN implements the k-Nearest Neighbors algorithm.
 func KNN(queryPoints []scaler.DataPoint, settings Settings) []string {
@@ -64,7 +76,7 @@ func KNN(queryPoints []scaler.DataPoint, settings Settings) []string {
 	queryPoints = GlobalScaler.Transform(queryPoints)
 
 	// Parallelizeed distance calculation
-	distances := nonParallelDistanceCalculation(queryPoints, trainingData)
+	distances := nonParallelDistanceCalculation(queryPoints, trainingData, settings)
 	// Process each query point
 	for i, queryPointDistances := range distances {
 		// Sort distances for the current query point in ascending order.
@@ -80,15 +92,15 @@ func KNN(queryPoints []scaler.DataPoint, settings Settings) []string {
 			sigma := settings.Sigma // Adjust this value as needed
 
 			for j := 0; j < settings.K; j++ {
-				distance := topKDistances[j].distance     // Rescale the distance
-				weight := math.Exp(-(distance / (sigma))) // Use Gaussian function of the rescaled distance as the weight
+				distance := topKDistances[j].distance // Rescale the distance
+				weight := weightingSwitch(distance, sigma, ExampleOptions{settings.WeigthingMethod})
 				totalWeight += weight
 			}
 
 			for j := 0; j < settings.K; j++ {
 				distance := topKDistances[j].distance
-				weight := math.Exp(-(distance / (sigma))) // Use Gaussian function of the rescaled distance as the weight
-				normalizedWeight := weight / totalWeight  // Normalize the weight
+				weight := weightingSwitch(distance, sigma, ExampleOptions{settings.WeigthingMethod})
+				normalizedWeight := weight / totalWeight
 				label := trainingData[topKDistances[j].trainingIndex].Label
 				labelCounts[label] += normalizedWeight
 			}
@@ -114,7 +126,7 @@ func KNN(queryPoints []scaler.DataPoint, settings Settings) []string {
 	}
 	return predictions
 }
-func nonParallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoint) [][]struct {
+func nonParallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoint, settings Settings) [][]struct {
 	queryIndex    int
 	trainingIndex int
 	distance      float64
@@ -135,7 +147,7 @@ func nonParallelDistanceCalculation(queryPoints []DataPoint, trainingData []Data
 		}, len(trainingData))
 
 		for j, trainingPoint := range trainingData {
-			distance := distanceSwitch(queryPoint, trainingPoint, ExampleOptions{""})
+			distance := distanceSwitch(queryPoint, trainingPoint, ExampleOptions{settings.DistanceMethod})
 			distances[i][j] = struct {
 				queryIndex    int
 				trainingIndex int

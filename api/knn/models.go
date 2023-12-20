@@ -22,5 +22,6 @@ type Settings struct {
 	WeightedDistances bool   `json:"weightedDistances"`
 	DistanceMethod    string `json:"distanceMethod"`
 	//if weightedDistances
-	Sigma float64 `json:"sigma"`
+	Sigma           float64 `json:"sigma"`
+	WeigthingMethod string  `json:"weigthingMethod"`
 }

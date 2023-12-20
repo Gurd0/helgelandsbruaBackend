@@ -49,6 +49,7 @@ func postPredict(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println(windList.Settings)
 	predictionWind := PredictList(windList.Wind, windList.Settings)
 	predictionGust := predictionWind
 
