@@ -26,10 +26,10 @@ func init() {
 }
 
 var DefaultSetting = Settings{
-	K:                 120,
+	K:                 200,
 	DistanceMethod:    "Euclidean",
 	WeightedDistances: true,
-	Sigma:             0.001,
+	Sigma:             0.01,
 }
 
 type ExampleOptions struct {
