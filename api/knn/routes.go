@@ -3,6 +3,7 @@ package knn
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -46,10 +47,12 @@ func postPredict(w http.ResponseWriter, r *http.Request) {
 	var windList PredictInputList
 	err := json.NewDecoder(r.Body).Decode(&windList)
 	if err != nil {
-		//TODO error
+		fmt.Println(err)
 	}
-	predictionWind := PredictList(windList.Wind)
+	fmt.Println(windList.Settings)
+	predictionWind := PredictList(windList.Wind, windList.Settings)
 	predictionGust := predictionWind
+
 	data := PredictResponsList{
 		Wind: predictionWind,
 		Gust: predictionGust,

@@ -23,7 +23,7 @@ type DataPointTransformer interface {
 
 // Fit computes the mean and standard deviation of each feature from the provided dataset.
 func (scaler *StandardScaler) Fit(data []DataPoint) {
-	numFeatures := 1
+	numFeatures := len(data[0].Features)
 	numSamples := len(data)
 
 	// Initialize Mean and StdDev slices
@@ -32,29 +32,26 @@ func (scaler *StandardScaler) Fit(data []DataPoint) {
 
 	// Calculate mean
 	for _, point := range data {
-		scaler.Mean[0] += point.Features[0]
-		/*for j, value := range point.Features {
+		for j, value := range point.Features {
 			scaler.Mean[j] += value
-		} */
+		}
 	}
 	scaler.Mean[0] /= float64(numSamples)
-	/*for j := range scaler.Mean {
+	for j := range scaler.Mean {
 		scaler.Mean[j] /= float64(numSamples)
-	} */
+	}
 
 	// Calculate standard deviation
+
 	for _, point := range data {
-		scaler.StdDev[0] += math.Pow(point.Features[0]-scaler.Mean[0], 2)
-	}
-	/*for _, point := range data {
 		for j, value := range point.Features {
 			scaler.StdDev[j] += math.Pow(value-scaler.Mean[j], 2)
 		}
-	} */
+	}
 
-	/*for j := range scaler.StdDev {
+	for j := range scaler.StdDev {
 		scaler.StdDev[j] = math.Sqrt(scaler.StdDev[j] / float64(numSamples))
-	} */
+	}
 
 	scaler.Trained = true
 }
@@ -75,13 +72,9 @@ func (scaler *StandardScaler) Transform(data []DataPoint) []DataPoint {
 			Features: make([]float64, numFeatures),
 			Label:    point.Label,
 		}
-		/*for j, value := range point.Features {
-			transformed[i].Features[j] =
-		} */
-		transformed[i].Features[0] = point.Features[0] //((point.Features[0] - scaler.Mean[0]) / scaler.StdDev[0])
-		transformed[i].Features[1] = point.Features[1]
-		transformed[i].Features[2] = point.Features[2]
-		//transformed[i].Features[0] = transformed[i].Features[0] / 2
+		for j, value := range point.Features {
+			transformed[i].Features[j] = (value - scaler.Mean[j]) / scaler.StdDev[j]
+		}
 	}
 	return transformed
 }

@@ -1,6 +1,6 @@
 module github.com/Gurd0/helgelandsbruaBackend
 
-go 1.18.1
+go 1.21.4
 
 require github.com/go-chi/render v1.0.3
 

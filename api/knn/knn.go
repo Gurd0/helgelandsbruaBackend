@@ -20,62 +20,146 @@ var data []DataPoint
 var trainingData []DataPoint
 var testData []DataPoint
 var GlobalScaler scaler.DataPointTransformer = &scaler.StandardScaler{}
-var k = 40
 
 func init() {
 	UpdateDataInKNN()
 }
 
-// Distance calculates the Euclidean distance between two data points.
-func Distance(a, b DataPoint) float64 {
-	sum := 0.0
-	for i := 0; i < len(a.Features); i++ {
-		diff := a.Features[i] - b.Features[i]
-		sum += diff * diff
+var DefaultSetting = Settings{
+	K:                 200,
+	DistanceMethod:    "Euclidean",
+	WeightedDistances: true,
+	Sigma:             0.01,
+}
+
+type ExampleOptions struct {
+	distanceMethod string
+}
+
+// distanceSwitch calculates the distance between two DataPoints based on the specified distance method.
+// If the specified distance method is not recognized, default to Euclidean distance.
+func distanceSwitch(queryPoint, trainingPoint DataPoint, options ExampleOptions) float64 {
+	switch os := options.distanceMethod; os {
+	case "Euclidean":
+		return EuclideanDistance(queryPoint, trainingPoint)
+	case "Manhattan":
+		return ManhattanDistance(queryPoint, trainingPoint)
+	case "Chebyshev":
+		return ChebyshevDistance(queryPoint, trainingPoint)
+	case "CosineSimilarity":
+		return CosineSimilarity(queryPoint, trainingPoint)
+	default:
+		return EuclideanDistance(queryPoint, trainingPoint)
 	}
-	return math.Sqrt(sum)
+}
+func weightingSwitch(distance float64, sigma float64, options ExampleOptions) float64 {
+	switch os := options.distanceMethod; os {
+	case "Triangular":
+		return TriangularKernel(distance, sigma)
+	case "Epanechnikov":
+		return EpanechnikovKernel(distance, sigma)
+	case "Gaussian":
+		return GaussianKernel(distance, sigma)
+	default:
+		return GaussianKernel(distance, sigma)
+	}
 }
 
 // KNN implements the k-Nearest Neighbors algorithm.
-func KNN(queryPoints []scaler.DataPoint, scaleData bool) []string {
-
-	predictions := make([]string, len(queryPoints))
-	if scaleData {
-		queryPoints = GlobalScaler.Transform(queryPoints)
-		fmt.Println(queryPoints)
+func KNN(queryPoints []scaler.DataPoint, settings Settings) []string {
+	if settings.K == 0 && settings.WeightedDistances == false && settings.DistanceMethod == "" && settings.Sigma == 0 {
+		settings = DefaultSetting
 	}
+	predictions := make([]string, len(queryPoints))
+
+	//transforms input data to match training data.
+	queryPoints = GlobalScaler.Transform(queryPoints)
+
 	// Parallelizeed distance calculation
-	distances := parallelDistanceCalculation(queryPoints, trainingData, 4)
+	distances := nonParallelDistanceCalculation(queryPoints, trainingData, settings)
 	// Process each query point
 	for i, queryPointDistances := range distances {
 		// Sort distances for the current query point in ascending order.
 		sort.Slice(queryPointDistances, func(j, k int) bool {
-			return queryPointDistances[i].distance < queryPointDistances[j].distance
+			return queryPointDistances[j].distance < queryPointDistances[k].distance
 		})
+		topKDistances := queryPointDistances[:settings.K]
+		//TODO, move this to a different file and make a switch like for distance calculation.
+		if settings.WeightedDistances {
+			//add weighted distances
+			labelCounts := make(map[string]float64)
+			totalWeight := 0.0
+			sigma := settings.Sigma // Adjust this value as needed
 
-		// Count the occurrences of each label among the k nearest neighbors.
-		labelCounts := make(map[string]int)
-		for j := 0; j < k; j++ {
-			label := trainingData[queryPointDistances[j].trainingIndex].Label
-			labelCounts[label]++
-		}
-
-		// Find the label with the maximum count.
-		maxCount := 0
-		var predictedLabel string
-		for label, count := range labelCounts {
-			if count > maxCount {
-				maxCount = count
-				predictedLabel = label
+			for j := 0; j < settings.K; j++ {
+				distance := topKDistances[j].distance // Rescale the distance
+				weight := weightingSwitch(distance, sigma, ExampleOptions{settings.WeigthingMethod})
+				totalWeight += weight
 			}
+
+			for j := 0; j < settings.K; j++ {
+				distance := topKDistances[j].distance
+				weight := weightingSwitch(distance, sigma, ExampleOptions{settings.WeigthingMethod})
+				normalizedWeight := weight / totalWeight
+				label := trainingData[topKDistances[j].trainingIndex].Label
+				labelCounts[label] += normalizedWeight
+			}
+			// Find the label with the maximum weighted count.
+			var maxWeight = math.Inf(-1)
+			var predictedLabel string
+			var labelsWithMaxWeight []string
+			for label, weight := range labelCounts {
+				if weight > maxWeight {
+					maxWeight = weight
+					predictedLabel = label
+					labelsWithMaxWeight = []string{label}
+				} else if weight == maxWeight {
+					labelsWithMaxWeight = append(labelsWithMaxWeight, label)
+				}
+			}
+
+			// Store the predicted label for the current query point.
+			predictions[i] = predictedLabel
+		} else {
+			predictions[i] = trainingData[topKDistances[0].trainingIndex].Label
 		}
-
-		// Store the predicted label for the current query point.
-		predictions[i] = predictedLabel
 	}
-
 	return predictions
 }
+func nonParallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoint, settings Settings) [][]struct {
+	queryIndex    int
+	trainingIndex int
+	distance      float64
+} {
+	// Initialize distances matrix
+	distances := make([][]struct {
+		queryIndex    int
+		trainingIndex int
+		distance      float64
+	}, len(queryPoints))
+
+	// Sequential calculation of distances
+	for i, queryPoint := range queryPoints {
+		distances[i] = make([]struct {
+			queryIndex    int
+			trainingIndex int
+			distance      float64
+		}, len(trainingData))
+
+		for j, trainingPoint := range trainingData {
+			distance := distanceSwitch(queryPoint, trainingPoint, ExampleOptions{settings.DistanceMethod})
+			distances[i][j] = struct {
+				queryIndex    int
+				trainingIndex int
+				distance      float64
+			}{i, j, distance}
+		}
+	}
+
+	return distances
+}
+
+// TODO, not sure but slower than non parallel
 func parallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoint, numWorkers int) [][]struct {
 	queryIndex    int
 	trainingIndex int
@@ -110,7 +194,7 @@ func parallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoi
 	worker := func() {
 		defer wg.Done()
 		for work := range workCh {
-			distance := Distance(work.queryPoint, work.trainingPoint)
+			distance := ChebyshevDistance(work.queryPoint, work.trainingPoint)
 
 			resultCh <- struct {
 				queryIndex    int
@@ -174,19 +258,6 @@ func parallelDistanceCalculation(queryPoints []DataPoint, trainingData []DataPoi
 }
 func UpdateDataInKNN() {
 	fmt.Println("update run")
-	//TODO, må no fins ein måte å få læst filæ
-	/*resp, err := http.Get("https://helgelandsbrua-backend.vercel.app/data.csv")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Check if the request was successful
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Error: Unexpected status code", resp.Status)
-		return
-	} */
 	file, err := os.Open("data.csv")
 	if err != nil {
 		fmt.Println("Error opening CSV file:", err)
@@ -212,10 +283,7 @@ func UpdateDataInKNN() {
 		}
 
 		label := record[len(record)-1]
-		//features[1] = features[1] / 100
-
-		//features = minMaxScaling(features, 0, 360)
-		//features = []float64{features[0] + features[1]}
+		//features[0] = features[0] / 10
 
 		dataPoint := DataPoint{
 			Features: features,
@@ -230,39 +298,38 @@ func UpdateDataInKNN() {
 
 func Predict(obj PredictInput) float64 {
 	var queryPointList []DataPoint
-	scaledX, scaledY := CircularScale(obj.WindDir)
-	queryPoint := DataPoint{Features: []float64{obj.Wind, scaledX, scaledY}, Label: ""}
+	//scaledX, scaledY := CircularScale(obj.WindDir)
+	queryPoint := DataPoint{Features: []float64{obj.Wind, obj.WindDir}, Label: ""}
 	queryPointList = append(queryPointList, queryPoint)
-	predictedLabel := KNN(queryPointList, true)
+	predictedLabel := KNN(queryPointList, Settings{})
 	predictedLabelFloat, _ := strconv.ParseFloat(predictedLabel[0], 64)
-	res := predictedLabelFloat
+	res := predictedLabelFloat * obj.Wind
 	return res
 }
-func PredictList(inputList []PredictInput) []string {
+func PredictList(inputList []PredictInput, setting Settings) []string {
 	var datapointList []DataPoint
+	fmt.Println(setting)
 	for _, obj := range inputList {
-		scaledX, scaledY := CircularScale(obj.WindDir)
 		queryPoint := DataPoint{Features: []float64{
 			obj.Wind,
-			scaledX,
-			scaledY}, Label: ""}
-		fmt.Println(queryPoint)
-		//queryPoint.Features[1] = math.Log(queryPoint.Features[1])
+			obj.WindDir}, Label: ""}
 		datapointList = append(datapointList, queryPoint)
 	}
-	res := KNN(datapointList, true)
+	res := KNN(datapointList, setting)
 	for index, obj := range res {
 		objFloat, _ := strconv.ParseFloat(obj, 64)
-		r := objFloat
+		r := objFloat * inputList[index].Wind
 		resString := strconv.FormatFloat(r, 'f', 2, 64)
 		res[index] = resString
 	}
 
 	return res
 }
+
+// TODO, did not manage to get good res scaling
 func CircularScale(angle float64) (scaledX, scaledY float64) {
 	radian := angle * (math.Pi / 180.0)
 	scaledX = math.Cos(radian)
 	scaledY = math.Sin(radian)
-	return scaledX, scaledY
+	return scaledX * 10, scaledY * 100
 }
